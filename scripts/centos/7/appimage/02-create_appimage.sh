@@ -125,11 +125,8 @@ sudo rm -rf Element*.AppImage
 #cp -L /lib64/libcrypto.so.10 squashfs-root/usr/lib/.
 #cp -L /lib64/libssl3.so squashfs-root/usr/lib/.
 #cp -L /lib64/libssl.so.10 squashfs-root/usr/lib/.
-./appimagetool-x86_64.AppImage squashfs-root -n -u 'gh-releases-zsync|srevinsaju|element-appimage|continuous|Element*.AppImage.zsync' Element-$ELEMENT_BUILD_VERSION.glibc`ldd --version | grep 'ldd ' | grep -o ').[0-9].[0-9][0-9]' | grep -o '[0-9].[0-9][0-9]'`.AppImage
+export VERSION="$ELEMENT_BUILD_VERSION"
+./appimagetool-x86_64.AppImage squashfs-root -n -u 'gh-releases-zsync|TheAssassin|element-appimage|continuous|Element*.AppImage.zsync'
 rm -r ./appimagetool-x86_64.AppImage
 chmod +x *.AppImage
 rm -rf squashfs-root
-
-
-
-
