@@ -1,26 +1,6 @@
-#!/bin/bash
+#! /bin/bash
 
-set -eux 
-
-
-export NODE_VERSION="16.x"
-export SQLCIPHER_VERSION="4.4.3"
-export APPIMAGE_EXTRACT_AND_RUN=1
-
-if [ -z ${BUILD_DEPS+x} ]
-then
-    export BUILD_DEPS="true"
-fi
-
-
-echo ""
-
-ls -al
-
-mkdir -p _deps 
-mkdir -p _build
-mkdir -p _release
-
+set -euo pipefail
 
 status () {
     echo "========================="
@@ -28,52 +8,30 @@ status () {
     echo "========================="
 }
 
-export RT="$PWD"
+if [[ "${NODE_VERSION}" == "" ]]; then
+    status "Usage: env NODE_VERSION=... $0"
+    exit 2
+fi
 
+set -x
 
-cd "$RT/_deps"
+export APPIMAGE_EXTRACT_AND_RUN=1
 
-#if ! command -v sqlcipher &> /dev/null || [[ "$BUILD_DEPS" == "false" ]]
-#then
-#    status "Setting up sqlcipher"
-#
-#    # clone the source code of sqlcipher
-#    git clone https://github.com/sqlcipher/sqlcipher
-#    cd sqlcipher
-#    git checkout "v$SQLCIPHER_VERSION"
-#    ./configure --prefix=/usr --enable-tempstore=yes \
-#        CFLAGS="-DSQLITE_HAS_CODEC" LDFLAGS="-lcrypto"
-#    make
-#    DESTDIR=/usr sudo make install
-#fi
+ls -al
 
+mkdir -p _deps 
+mkdir -p _build
+mkdir -p _release
 
-cd "$RT"
+old_cwd="$(readlink -f "$PWD")"
+workdir="$(mktemp -d --tmpdir element-appimage-build-XXXXX)"
 
-#curl --silent --location https://rpm.nodesource.com/setup_$NODE_VERSION | sudo bash -
-#sudo yum -y install nodejs
-#curl --silent --location https://dl.yarnpkg.com/rpm/yarn.repo | sudo tee /etc/yum.repos.d/yarn.repo
-#sudo rpm --import https://dl.yarnpkg.com/rpm/pubkey.gpg
-#sudo yum -y install yarn
-#yarn --version
-#node --version
-#sudo yarn global add neon-cli
-#neon version
+_cleanup() {
+    [[ -d "$workdir" ]] && rm -rf "$workdir"
+}
+trap _cleanup EXIT
 
-
-cd "$RT"
-
-
-status "Setting up Rust"
-curl https://sh.rustup.rs -sSf | sh -s -- -y -q
-export PATH=$PATH:$HOME/.cargo/bin
-cargo --version
-rustc --version
-source $HOME/.cargo/env
-
-
-
-cd "$RT/_build"
+pushd "$workdir"
 
 status "Cloning Element Desktop"
 
@@ -89,7 +47,7 @@ yarn install
 sed -i 's,docker run --rm -ti,docker run --rm,g' scripts/in-docker.sh
 mkdir -p appimage_config
 pushd appimage_config
-if [[ "$BUILD_DEPS" == "stable" ]]; then 
+if [[ "$BUILD_TYPE" == "stable" ]]; then
   wget https://app.element.io/config.json 
 else
   wget https://develop.element.io/config.json
@@ -127,6 +85,8 @@ sudo rm -rf Element*.AppImage
 #cp -L /lib64/libssl.so.10 squashfs-root/usr/lib/.
 export VERSION="$ELEMENT_BUILD_VERSION"
 ./appimagetool-x86_64.AppImage squashfs-root -n -u 'gh-releases-zsync|TheAssassin|element-appimage|continuous|Element*.AppImage.zsync'
-rm -r ./appimagetool-x86_64.AppImage
-chmod +x *.AppImage
-rm -rf squashfs-root
+
+chmod +x Element*.AppImage*
+mv Element*.AppImage* "$old_cwd"
+
+

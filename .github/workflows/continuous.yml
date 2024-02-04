@@ -5,25 +5,31 @@
 name: Continuous
 
 on:
+  push:
+  pull_request:
+  workflow_dispatch:
   schedule:
     - cron: "5 */12 * * *"
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
     strategy:
       matrix:
-        build_type: ['stable', 'develop']
+        build_type: ["stable", "develop"]
+        node_version: "18"
+    name: Build AppImage
+    runs-on: ubuntu-20.04
+    environment:
+      BUILD_TYPE: "${{ matrix.build_type }}"
+      NODE_VERSION: "${{ matrix.node_version }}"
     steps:
       - uses: actions/checkout@v2
+
       - uses: actions/setup-node@v1
         with:
-          node-version: 18
+          node-version: "${{ matrix.node_version }"
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Build Element
         run: |
@@ -34,8 +40,14 @@ jobs:
         uses: actions/upload-artifact@v1
         with:
           name: element-${{ matrix.build_type }}
-          path: '_dist'
+          path: "_dist"
 
+  release:
+    name: Create release and upload artifacts
+    needs:
+      - build
+    runs-on: ubuntu-20.04
+    steps:
       - name: Create release and upload artifacts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
