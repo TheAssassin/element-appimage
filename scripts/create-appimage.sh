@@ -74,6 +74,7 @@ ls -al
 ./scripts/in-docker.sh yarn run electron-builder -l appimage --publish never
 
 pushd dist
+sudo chown -R "$(id -u):$(id -g)" .
 
 ./*.AppImage --appimage-extract
 wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
