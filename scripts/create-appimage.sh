@@ -43,6 +43,9 @@ if [[ "$BUILD_TYPE" == "stable" ]]; then
 fi
 git describe --tags --always --match "v*.*"
 export ELEMENT_BUILD_VERSION="$(git describe --tags --always --match 'v*.*')"
+
+bash patch.sh
+
 yarn install
 
 sed -i 's,docker run --rm -ti,docker run --rm,g' scripts/in-docker.sh
@@ -60,7 +63,6 @@ yarn run docker:setup
 
 cp "$repo_root"/*.ts src
 cp "$repo_root"/patch.sh .
-bash patch.sh
 
 pwd
 ls
