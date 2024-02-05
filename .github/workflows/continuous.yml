@@ -45,11 +45,12 @@ jobs:
           export BUILD_TYPE="${{ matrix.build_type }}"
           bash scripts/create-appimage.sh
 
-      - name: Upload Appimage
+      - name: Archive artifacts
         uses: actions/upload-artifact@v3
         with:
           name: element-${{ matrix.build_type }}
-          path: "_dist"
+          path: |
+              Element-*.AppImage*
 
   release:
     name: Create release and upload artifacts
@@ -78,4 +79,4 @@ jobs:
           fi
           wget https://github.com/srevinsaju/pyuploadtool/releases/download/continuous/pyuploadtool-x86_64.AppImage
           chmod +x pyuploadtool-x86_64.AppImage
-          APPIMAGE_EXTRACT_AND_RUN=1 ./pyuploadtool-x86_64.AppImage _dist/*.AppImage*
+          APPIMAGE_EXTRACT_AND_RUN=1 ./pyuploadtool-x86_64.AppImage *.AppImage*
