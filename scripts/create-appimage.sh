@@ -28,7 +28,8 @@ old_cwd="$(readlink -f "$PWD")"
 workdir="$(mktemp -d --tmpdir element-appimage-build-XXXXX)"
 
 _cleanup() {
-    [[ -d "$workdir" ]] && rm -rf "$workdir"
+    # sudo is required as the Docker stuff runs as root
+    [[ -d "$workdir" ]] && sudo rm -rf "$workdir"
 }
 trap _cleanup EXIT
 
@@ -72,7 +73,7 @@ ls -al
 
 ./scripts/in-docker.sh yarn run electron-builder -l appimage --publish never
 
-ls dist
+pushd dist
 
 ./*.AppImage --appimage-extract
 wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
