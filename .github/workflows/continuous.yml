@@ -16,28 +16,36 @@ jobs:
     strategy:
       matrix:
         build_type: ["stable", "develop"]
-        node_version: "18"
+        node_version: ["18.6.0"]
     name: Build AppImage
     runs-on: ubuntu-20.04
-    environment:
+    env:
       BUILD_TYPE: "${{ matrix.build_type }}"
       NODE_VERSION: "${{ matrix.node_version }}"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v4
         with:
-          node-version: "${{ matrix.node_version }"
+          node-version: "${{ matrix.node_version }}"
 
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Install yarn
+        run: |
+          npm install -g yarn
+
+      - name: Set up Rust
+        run: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y -q
+          echo "PATH=$PATH:$HOME/.cargo/bin" >> "$GITHUB_ENV"
+
 
       - name: Build Element
         run: |
           export BUILD_TYPE="${{ matrix.build_type }}"
-          bash -ex ./scripts/centos/7/appimage/02*.sh
+          bash scripts/create-appimage.sh
 
       - name: Upload Appimage
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v3
         with:
           name: element-${{ matrix.build_type }}
           path: "_dist"
@@ -48,6 +56,10 @@ jobs:
       - build
     runs-on: ubuntu-20.04
     steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+      - name: Inspect directory after downloading artifacts
+        run: ls -alFR
       - name: Create release and upload artifacts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

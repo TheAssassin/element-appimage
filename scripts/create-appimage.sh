@@ -8,8 +8,8 @@ status () {
     echo "========================="
 }
 
-if [[ "${NODE_VERSION}" == "" ]]; then
-    status "Usage: env NODE_VERSION=... $0"
+if [[ "$BUILD_TYPE" == "" ]] || [[ "$NODE_VERSION" == "" ]]; then
+    status "Usage: env BUILD_TYPE=... NODE_VERSION=... $0"
     exit 2
 fi
 
@@ -19,10 +19,11 @@ export APPIMAGE_EXTRACT_AND_RUN=1
 
 ls -al
 
-mkdir -p _deps 
+mkdir -p _deps
 mkdir -p _build
 mkdir -p _release
 
+repo_root="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")/..")"
 old_cwd="$(readlink -f "$PWD")"
 workdir="$(mktemp -d --tmpdir element-appimage-build-XXXXX)"
 
@@ -35,10 +36,9 @@ pushd "$workdir"
 
 status "Cloning Element Desktop"
 
-git clone https://github.com/vector-im/element-desktop
-cd element-desktop
+git clone https://github.com/element-hq/element-desktop .
 if [[ "$BUILD_TYPE" == "stable" ]]; then
-    git checkout `curl -L --silent -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/vector-im/element-desktop/releases/latest | jq  -r '.tag_name'`
+    git checkout `curl -L --silent -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/element-hq/element-desktop/releases/latest | jq  -r '.tag_name'`
 fi
 git describe --tags --always --match "v*.*"
 export ELEMENT_BUILD_VERSION="$(git describe --tags --always --match 'v*.*')"
@@ -48,7 +48,7 @@ sed -i 's,docker run --rm -ti,docker run --rm,g' scripts/in-docker.sh
 mkdir -p appimage_config
 pushd appimage_config
 if [[ "$BUILD_TYPE" == "stable" ]]; then
-  wget https://app.element.io/config.json 
+  wget https://app.element.io/config.json
 else
   wget https://develop.element.io/config.json
 fi
@@ -57,22 +57,22 @@ popd
 yarn run fetch --noverify --cfgdir 'appimage_config'
 yarn run docker:setup
 
-cp $RT/*.ts src/.
-cp $RT/patch.sh .
-./patch.sh
+cp "$repo_root"/*.ts src
+cp "$repo_root"/patch.sh .
+bash patch.sh
 
-yarn run docker:install < /dev/null
+pwd
+ls
+
+yarn run docker:install
 yarn run docker:build:native
 yarn run docker:build
+
+ls -al
+
 ./scripts/in-docker.sh yarn run electron-builder -l appimage --publish never
 
 ls dist
-
-mkdir -p $RT/_dist/.
-sudo chmod o+rwx dist/*.AppImage
-sudo mv dist/*.AppImage $RT/_dist/.
-sudo chown `whoami`:`whoami` $RT/_dist/*.AppImage
-cd $RT/_dist/.
 
 ./*.AppImage --appimage-extract
 wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
